@@ -77,42 +77,42 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
 
   always @(present_state, opcode)
   begin
-
-  /* TODO: Generate combinational signals based on the FSM states and inputs. For Parts 2, 3 and 4 you will
-       add the new control signals here. */
-       // -*- Default vals -*-
-    assign rf_we = 1'b0;
-    assign wb_sel = 1'b0;
-    assign alu_op = 4'b0000;
+    // 1. SET DEFAULT VALUES
+    // This ensures no accidental writes or "latches" occur
+    rf_we = 1'b0;      
+    wb_sel = 1'b0;     
+    alu_op = 4'b0000;  
 
     case(present_state)
-      fetch, decode: begin
-      end
+      // During EXECUTE, tell the ALU which operation to perform
       execute: begin
         case(opcode)
-          REG_OP: alu_op = 4'b0001;
-          REG_IM: alu_op = 4'b0011;
-          default: alu_op = 4'b0000;
+          REG_OP:  alu_op = 4'b0001; // bits 3:1=000 (Rsa <fc> Rsb), bit 0=1 (update stat)
+          REG_IM:  alu_op = 4'b0011; // bits 3:1=001 (Rsa <fc> imm), bit 0=1 (update stat)
+          NOOP:    alu_op = 4'b1100; // bits 3:1=110 (Rsa), bit 0=0 (no update) 
+
+          HLT: begin
+            $display("HALT instruction encountered at time %d", $time); [cite: 393]
+            $stop; // This stops the simulation 
+          end
+          
+          default: alu_op = 4'b0000; 
         endcase
       end
-      writeback: begin
-        if (opcode == REG_OP || opcode == REG_IM) begin
-          rf_we = 1'b1;
-          wb_sel = 1'b0;
-        end
-      end
-    endcase
-  end
 
-// Halt on HLT instruction
-  
-  always @ (opcode)
-  begin
-    if (opcode == HLT)
-    begin 
-      #5 $display ("Halt."); //Delay 5 ns so $monitor will print the halt instruction
-      $stop;
-    end
+      // During WRITEBACK, enable saving the data to the register file.
+      writeback: begin
+        case(opcode)
+          REG_OP, REG_IM: begin
+            rf_we = 1'b1;   // Set Write Enable to 1
+            wb_sel = 1'b0;  // Select ALU result (0) to go back to RF
+          end
+          // NOOP and HLT do not write back [cite: 363]
+        endcase
+      end
+      
+      // Other states (fetch, decode, mem) maintain default values
+    endcase
   end
     
   
