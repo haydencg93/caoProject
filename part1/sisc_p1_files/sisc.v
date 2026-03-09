@@ -9,10 +9,9 @@ module sisc (clk, rst_f, ir);
   input [31:0] ir;
 
 // declare all internal wires here
-
-  wire [3:0] alu_op;      
-  wire       rf_we;      
-  wire       wb_sel;      
+  wire [3:0]  alu_op;      
+  wire        rf_we;      
+  wire        wb_sel;      
   
   wire [31:0] rsa;        
   wire [31:0] rsb;        
@@ -21,11 +20,11 @@ module sisc (clk, rst_f, ir);
   
   wire [3:0]  stat_out;     
   wire [3:0]  alu_stat_out; 
-  wire        alu_stat_enable; 
+  wire [3:0]  alu_stat_enable; // FIXED: Changed from single wire to [3:0]
 
 // component instantiation goes here
 
-//control  unit
+//control unit
   ctrl ctrl_unit (
     .clk(clk),
     .rst_f(rst_f),
@@ -70,6 +69,7 @@ mux32 wb_mux (
     .sel(wb_sel),
     .out(write_data)
 );
+
 //stat
 statreg stat_unit (
     .clk(clk),
@@ -90,5 +90,3 @@ statreg stat_unit (
 end
 
 endmodule
-
-
