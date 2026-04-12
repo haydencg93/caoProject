@@ -36,7 +36,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 
   // Control Signal Logic
   always @(*) begin
-    // Default values to avoid latches
+    // Default values to prevent latches
     rf_we = 0; wb_sel = 0; alu_op = 0; 
     br_sel = 0; pc_rst = 0; pc_write = 0; pc_sel = 0; ir_load = 0;
 
@@ -47,38 +47,37 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 
     case(present_state)
       fetch: begin
-        ir_load = 1;    // Load instruction from IM to IR
-        pc_write = 1;   // Prepare to increment PC
+        ir_load = 1;    // Load instruction into IR
+        pc_write = 1;   // Increment PC
         pc_sel = 0;     // Select PC + 1
       end
 
       decode: begin
-        // Branch Logic implemented in Decode per requirements
+        // Implementation of branch instructions in Decode stage
         case (opcode)
-          BNE: begin // Absolute Branch if Not Equal (Z=0)
+          BNE: begin // Absolute Branch if Z=0
             if (stat[0] == 1'b0) begin
-              br_sel = 1;   // Absolute address
-              pc_sel = 1;   // Select branch address
-              pc_write = 1; // Load it into PC
+              br_sel = 1;   
+              pc_sel = 1;   
+              pc_write = 1; 
             end
           end
-          BRR: begin // Relative Branch (Unconditional/Always)
-              br_sel = 0;   // Relative address (PC + offset)
-              pc_sel = 1;   // Select branch address
-              pc_write = 1; // Load it into PC
+          BRR: begin // Unconditional Relative Branch
+              br_sel = 0;   
+              pc_sel = 1;   
+              pc_write = 1; 
           end
-          BNR: begin // Relative Branch if Not Equal (Z=0)
+          BNR: begin // Relative Branch if Z=0
             if (stat[0] == 1'b0) begin
-              br_sel = 0;   // Relative address
-              pc_sel = 1;   // Select branch address
-              pc_write = 1; // Load it into PC
+              br_sel = 0;   
+              pc_sel = 1;   
+              pc_write = 1; 
             end
           end
         endcase
       end
 
       execute, mem, writeback: begin 
-        // Part 1 ALU Operations
         if (opcode == REG_OP) alu_op = 4'b0001;
         else if (opcode == REG_IM) alu_op = 4'b0011;
         else if (opcode == HLT) begin
@@ -86,7 +85,6 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
            $finish;
         end
         
-        // Writeback logic
         if (present_state == writeback) begin
           if (opcode == REG_OP || opcode == REG_IM) rf_we = 1;
         end
