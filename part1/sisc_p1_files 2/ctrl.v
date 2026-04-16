@@ -1,6 +1,6 @@
 `timescale 1ns/100ps
 
-module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
+module ctrl_p1 (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
   input clk, rst_f;
   input [3:0] opcode, mm, stat;
   output reg rf_we, wb_sel;

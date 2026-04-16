@@ -3,7 +3,7 @@
 
 `timescale 1ns/100ps
 
-module alu (clk, rsa, rsb, imm, c_in, alu_op, funct, alu_result, stat, stat_en);
+module alu_p1 (clk, rsa, rsb, imm, c_in, alu_op, funct, alu_result, stat, stat_en);
 
   /*
    *  ARITHMETIC LOGIC UNIT - alu.v

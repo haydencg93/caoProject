@@ -3,7 +3,7 @@
 
 `timescale 1ns/100ps
 
-module mux32 (in_a, in_b, sel, out);
+module mux32_p1 (in_a, in_b, sel, out);
 
   /*
    *  32-BIT MULTIPLEXER - mux32.v

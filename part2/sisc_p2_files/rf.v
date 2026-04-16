@@ -37,7 +37,7 @@ module rf (clk, read_rega, read_regb, write_reg, write_data, rf_we, rsa, rsb);
   output [31:0] rsa;
   output [31:0] rsb;
   
-  reg    [31:0] ram_array [15:0];
+  reg    [31:0] ram_array [0:15];
   reg    [31:0] rsa;
   reg    [31:0] rsb;
 

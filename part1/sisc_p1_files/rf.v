@@ -3,7 +3,7 @@
 
 `timescale 1ns/100ps
 
-module rf (clk, read_rega, read_regb, write_reg, write_data, rf_we, rsa, rsb);
+module rf_p1 (clk, read_rega, read_regb, write_reg, write_data, rf_we, rsa, rsb);
 
   /*
    *  REGISTER FILE - rf.v

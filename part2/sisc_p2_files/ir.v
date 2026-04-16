@@ -21,13 +21,8 @@ module ir (clk, ir_load, read_data, instr);
   input         clk;
   input         ir_load;
   input  [31:0] read_data;
-  output [31:0] instr;
+  output reg [31:0] instr;
 
-  wire          clk;
-  wire          ir_load;
-  wire   [31:0] read_data;
-  reg    [31:0] instr;
- 
   // instruction register
   
   initial

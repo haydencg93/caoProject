@@ -1,0 +1,231 @@
+<style>
+.op-btn{padding:6px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-secondary);font-size:13px;font-family:var(--font-mono);cursor:pointer;transition:all .15s}
+.op-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.op-btn.active{background:#EEEDFE;color:#3C3489;border-color:#534AB7}
+@media(prefers-color-scheme:dark){.op-btn.active{background:#3C3489;color:#CECBF6;border-color:#AFA9EC}}
+.sig{font-size:11px;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;display:inline-block;margin:1px 2px;transition:all .2s}
+.sig.off{background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+.sig.on{background:#E1F5EE;color:#085041}
+@media(prefers-color-scheme:dark){.sig.on{background:#085041;color:#9FE1CB}}
+.sig.cond{background:#FAEEDA;color:#633806}
+@media(prefers-color-scheme:dark){.sig.cond{background:#633806;color:#FAC775}}
+.sig.val{background:#E6F1FB;color:#0C447C}
+@media(prefers-color-scheme:dark){.sig.val{background:#0C447C;color:#B5D4F4}}
+.sc{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 12px;margin:3px 0;transition:all .2s;background:transparent}
+.sc.act{border-color:#534AB7;background:var(--color-background-secondary)}
+.sc.dim{opacity:0.3}
+.sn{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.sd{font-size:12px;color:var(--color-text-secondary);min-height:16px;margin-bottom:4px;line-height:1.5}
+.cn{font-size:11px;color:var(--color-text-warning);font-style:italic;margin-top:4px;line-height:1.4}
+.ad{text-align:center;color:var(--color-text-tertiary);font-size:14px;line-height:1;margin:2px 0}
+.ll{font-size:11px;color:var(--color-text-tertiary);text-align:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 4px;font-size:12px;color:var(--color-text-secondary)}
+.ld{display:flex;align-items:center;gap:4px}
+.ldot{width:10px;height:10px;border-radius:3px}
+</style>
+
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+<button class="op-btn active" onclick="sel('NOP')">NOP</button>
+<button class="op-btn" onclick="sel('REG_OP')">REG_OP</button>
+<button class="op-btn" onclick="sel('REG_IM')">REG_IM</button>
+<button class="op-btn" onclick="sel('BRA')">BRA</button>
+<button class="op-btn" onclick="sel('BRR')">BRR</button>
+<button class="op-btn" onclick="sel('BNE')">BNE</button>
+<button class="op-btn" onclick="sel('BNR')">BNR</button>
+<button class="op-btn" onclick="sel('HLT')">HLT</button>
+</div>
+
+<div class="legend">
+<div class="ld"><div class="ldot" style="background:#E1F5EE;border:1px solid #0F6E56"></div>Asserted (=1)</div>
+<div class="ld"><div class="ldot" style="background:#E6F1FB;border:1px solid #185FA5"></div>Multi-bit value</div>
+<div class="ld"><div class="ldot" style="background:#FAEEDA;border:1px solid #854F0B"></div>Conditional</div>
+<div class="ld"><div class="ldot" style="background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary)"></div>Default (=0)</div>
+</div>
+
+<div id="info" style="font-size:13px;color:var(--color-text-secondary);margin:8px 0 10px;min-height:36px;line-height:1.5">
+Opcode 0x0 — No operation. All control signals stay at defaults. Pipeline cycles through all states but does no work.
+</div>
+
+<div id="fsm">
+<div class="sc" id="s-start0"><div class="sn">start0</div>
+<div class="sd">Power-on. Immediate transition to start1.</div>
+<div id="g-start0"></div></div>
+<div class="ad">&darr;</div>
+
+<div class="sc" id="s-start1"><div class="sn">start1</div>
+<div class="sd" id="d-start1">Reset hold. Zeroes program counter. Waits for rst_f = 1.</div>
+<div id="g-start1"></div></div>
+<div class="ad">&darr; <span style="font-size:11px;color:var(--color-text-tertiary)">rst_f = 1</span></div>
+
+<div class="sc" id="s-fetch"><div class="sn">fetch</div>
+<div class="sd" id="d-fetch"></div>
+<div id="g-fetch"></div></div>
+<div class="ad">&darr;</div>
+
+<div class="sc" id="s-decode"><div class="sn">decode</div>
+<div class="sd" id="d-decode"></div>
+<div id="g-decode"></div>
+<div class="cn" id="c-decode"></div></div>
+<div class="ad">&darr;</div>
+
+<div class="sc" id="s-execute"><div class="sn">execute</div>
+<div class="sd" id="d-execute"></div>
+<div id="g-execute"></div></div>
+<div class="ad">&darr;</div>
+
+<div class="sc" id="s-mem"><div class="sn">mem</div>
+<div class="sd" id="d-mem"></div>
+<div id="g-mem"></div></div>
+<div class="ad">&darr;</div>
+
+<div class="sc" id="s-writeback"><div class="sn">writeback</div>
+<div class="sd" id="d-writeback"></div>
+<div id="g-writeback"></div></div>
+<div class="ll">&uarr; returns to fetch</div>
+</div>
+
+<script>
+var SIGS=['rf_we','wb_sel','alu_op[3:0]','br_sel','pc_rst','pc_write','pc_sel','ir_load'];
+
+var O={
+NOP:{
+ info:'Opcode 0x0 \u2014 No operation. All control signals stay at defaults. Pipeline cycles through all states but does no work.',
+ act:['start0','start1','fetch','decode','execute','mem','writeback'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 IM[PC]; PC \u2190 PC + 1.',
+ decode:{},decode_d:'No branch evaluation.',
+ execute:{},execute_d:'No ALU operation. alu_op = 0000.',
+ mem:{},mem_d:'No memory phase work.',
+ writeback:{},writeback_d:'No register write.'
+},
+REG_OP:{
+ info:'Opcode 0x1 \u2014 Register-register ALU operation (ADD, SUB, AND, OR, XOR, shifts, rotates). The funct field [11:0] selects the specific operation. Status flags updated in execute, latched in mem.',
+ act:['start0','start1','fetch','decode','execute','mem','writeback'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 IM[PC]; PC \u2190 PC + 1.',
+ decode:{},decode_d:'RF reads Rs (instr[19:16]) and Rt (instr[15:12]).',
+ execute:{'alu_op[3:0]':'v:0001'},
+ execute_d:'ALU computes Rs <funct> Rt. Bit 0 = 1 enables status register update.',
+ mem:{'alu_op[3:0]':'v:0000'},
+ mem_d:'ALU result latched. Bit 0 = 0 freezes status register.',
+ writeback:{rf_we:1},
+ writeback_d:'ALU result written to Rd (instr[23:20]) via register file.'
+},
+REG_IM:{
+ info:'Opcode 0x2 \u2014 Register-immediate ALU operation (ADI, SBI, ANI, ORI, SHLI, etc.). MFF field selects function. Immediate from instr[15:0] is sign-extended for arithmetic, zero-filled for logic.',
+ act:['start0','start1','fetch','decode','execute','mem','writeback'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 IM[PC]; PC \u2190 PC + 1.',
+ decode:{},decode_d:'RF reads Rs (instr[19:16]). Immediate from instr[15:0].',
+ execute:{'alu_op[3:0]':'v:0011'},
+ execute_d:'ALU computes Rs <funct> sign_ext(imm). Bit 0 = 1 enables status update.',
+ mem:{'alu_op[3:0]':'v:0010'},
+ mem_d:'ALU result latched. Bit 0 = 0 freezes status register.',
+ writeback:{rf_we:1},
+ writeback_d:'ALU result written to Rd (instr[23:20]).'
+},
+BRA:{
+ info:'Opcode 0x4 \u2014 Branch absolute. Taken if (CC & STAT) != 0. When taken: PC \u2190 target address (instr[15:0]). When not taken: PC already incremented in fetch, no update needed.',
+ act:['start0','start1','fetch','decode','execute','mem','writeback'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 IM[PC]; PC \u2190 PC + 1. (This PC+1 feeds BR module.)',
+ decode:{pc_sel:'c',br_sel:'c:1',pc_write:'c'},
+ decode_d:'Evaluate branch condition: (mm & stat) != 0?',
+ decode_c:'If taken: pc_sel=1, br_sel=1 (absolute: br_in=0, addr=0+target), pc_write=1.\nIf not taken: all stay 0. PC already holds correct next address from fetch.',
+ execute:{},execute_d:'No ALU work \u2014 branch resolved in decode.',
+ mem:{},mem_d:'No memory work.',
+ writeback:{},writeback_d:'No register write.'
+},
+BRR:{
+ info:'Opcode 0x5 \u2014 Branch relative. Taken if (CC & STAT) != 0. When taken: PC \u2190 (PC+1) + target. The PC+1 used here is the already-incremented value from fetch.',
+ act:['start0','start1','fetch','decode','execute','mem','writeback'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 IM[PC]; PC \u2190 PC + 1. (PC+1 feeds BR module for relative calc.)',
+ decode:{pc_sel:'c',br_sel:'c:0',pc_write:'c'},
+ decode_d:'Evaluate branch condition: (mm & stat) != 0?',
+ decode_c:'If taken: pc_sel=1, br_sel=0 (relative: br_in=PC+1, addr=PC+1+target), pc_write=1.\nIf not taken: all stay 0.',
+ execute:{},execute_d:'No ALU work.',
+ mem:{},mem_d:'No memory work.',
+ writeback:{},writeback_d:'No register write.'
+},
+BNE:{
+ info:'Opcode 0x6 \u2014 Branch-not-equal absolute. Taken if (CC & STAT) == 0. Special case: CC=0000 is unconditional (0 AND anything == 0, always true). PC \u2190 target.',
+ act:['start0','start1','fetch','decode','execute','mem','writeback'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 IM[PC]; PC \u2190 PC + 1.',
+ decode:{pc_sel:'c',br_sel:'c:1',pc_write:'c'},
+ decode_d:'Evaluate branch condition: (mm & stat) == 0?',
+ decode_c:'If taken: pc_sel=1, br_sel=1 (absolute), pc_write=1.\nIf not taken: all stay 0.\nCC=0000 \u2192 always taken (unconditional branch).',
+ execute:{},execute_d:'No ALU work.',
+ mem:{},mem_d:'No memory work.',
+ writeback:{},writeback_d:'No register write.'
+},
+BNR:{
+ info:'Opcode 0x7 \u2014 Branch-not-equal relative. Taken if (CC & STAT) == 0. PC \u2190 (PC+1) + target. CC=0000 is unconditional.',
+ act:['start0','start1','fetch','decode','execute','mem','writeback'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 IM[PC]; PC \u2190 PC + 1.',
+ decode:{pc_sel:'c',br_sel:'c:0',pc_write:'c'},
+ decode_d:'Evaluate branch condition: (mm & stat) == 0?',
+ decode_c:'If taken: pc_sel=1, br_sel=0 (relative), pc_write=1.\nIf not taken: all stay 0.\nCC=0000 \u2192 always taken (unconditional branch).',
+ execute:{},execute_d:'No ALU work.',
+ mem:{},mem_d:'No memory work.',
+ writeback:{},writeback_d:'No register write.'
+},
+HLT:{
+ info:'Opcode 0xF \u2014 Halt. Once fetched and decoded, the ctrl module detects opcode=0xF and calls $stop. The pipeline never reaches execute.',
+ act:['start0','start1','fetch','decode'],
+ start1:{pc_rst:1},
+ fetch:{pc_write:1,ir_load:1},
+ fetch_d:'IR \u2190 HLT instruction; PC \u2190 PC + 1.',
+ decode:{},
+ decode_d:'ctrl detects opcode = 0xF \u2192 $display("Halt."); $stop;',
+ decode_c:'Simulation halts here. Execute/mem/writeback never run for this instruction.',
+ execute:{},execute_d:'',
+ mem:{},mem_d:'',
+ writeback:{},writeback_d:''
+}
+};
+
+function mkSigs(id,sv){
+ var c=document.getElementById(id);
+ var h='';
+ SIGS.forEach(function(s){
+  var v=(sv||{})[s];
+  var cls='sig off',lbl=s+'=0';
+  if(s==='alu_op[3:0]'){lbl='alu_op=0000';}
+  if(v===1){cls='sig on';lbl=s+'=1';}
+  else if(typeof v==='string'&&v.startsWith('v:')){cls='sig val';lbl=s.replace('[3:0]','')+'='+v.slice(2);}
+  else if(typeof v==='string'&&v.startsWith('c:')){cls='sig cond';lbl=s+'='+v.slice(2)+'?';}
+  else if(v==='c'){cls='sig cond';lbl=s+'=?';}
+  h+='<span class="'+cls+'">'+lbl+'</span>';
+ });
+ c.innerHTML=h;
+}
+
+function sel(op){
+ document.querySelectorAll('.op-btn').forEach(function(b){b.classList.toggle('active',b.textContent===op);});
+ var o=O[op];
+ document.getElementById('info').textContent=o.info;
+ var sts=['start0','start1','fetch','decode','execute','mem','writeback'];
+ sts.forEach(function(st){
+  var card=document.getElementById('s-'+st);
+  if(o.act.indexOf(st)>=0){card.classList.add('act');card.classList.remove('dim');}
+  else{card.classList.remove('act');card.classList.add('dim');}
+  mkSigs('g-'+st,o[st]||{});
+  var dd=document.getElementById('d-'+st);
+  if(dd)dd.textContent=o[st+'_d']||'';
+  var cc=document.getElementById('c-'+st);
+  if(cc)cc.textContent=o[st+'_c']||'';
+ });
+}
+
+sel('NOP');
+</script>

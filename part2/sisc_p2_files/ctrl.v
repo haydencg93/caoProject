@@ -53,27 +53,13 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
       end
 
       decode: begin
-        // Implementation of branch instructions in Decode stage
         case (opcode)
-          BNE: begin // Absolute Branch if Z=0
-            if (stat[0] == 1'b0) begin
-              br_sel = 1;   
-              pc_sel = 1;   
-              pc_write = 1; 
-            end
-          end
-          BRR: begin // Unconditional Relative Branch
-              br_sel = 0;   
-              pc_sel = 1;   
-              pc_write = 1; 
-          end
-          BNR: begin // Relative Branch if Z=0
-            if (stat[0] == 1'b0) begin
-              br_sel = 0;   
-              pc_sel = 1;   
-              pc_write = 1; 
-            end
-          end
+          4, 5: if ((mm & stat) != 4'b0000) begin // BRA (4) and BRR (5)
+                  pc_write = 1; pc_sel = 1; br_sel = (opcode == 4);
+                end
+          6, 7: if ((mm & stat) == 4'b0000) begin // BNE (6) and BNR (7)
+                  pc_write = 1; pc_sel = 1; br_sel = (opcode == 6);
+                end
         endcase
       end
 

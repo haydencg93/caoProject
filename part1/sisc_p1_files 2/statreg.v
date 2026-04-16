@@ -3,7 +3,7 @@
 
 `timescale 1ns/100ps
 
-module statreg (clk, in, enable, out);
+module statreg_p1 (clk, in, enable, out);
 
   /*
    *  STATUS REGISTER - statreg.v

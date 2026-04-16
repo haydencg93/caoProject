@@ -3,7 +3,7 @@
 
 `timescale 1ns/100ps  
 
-module sisc_tb;
+module sisc_tb_p1;
 
   parameter    tclk = 10.0;    
   reg          clk;
@@ -13,7 +13,7 @@ module sisc_tb;
   // component instantiation
   // "uut" stands for "Unit Under Test"
  
-  sisc uut ( clk, rst_f, ir);
+  sisc_p1 uut ( clk, rst_f, ir);
 
   // clock driver
   initial
