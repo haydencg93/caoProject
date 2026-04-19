@@ -1,56 +1,116 @@
 `timescale 1ns/100ps
 
-module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, 
-             br_sel, pc_rst, pc_write, pc_sel, ir_load);
+module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst, pc_write, pc_sel, ir_load);
 
   input clk, rst_f;
-  input [3:0] opcode, mm, stat;
+  input [3:0] opcode, mm, stat; // mm is the Condition Code (CC) from ir[27:24]
   output reg rf_we, wb_sel, br_sel, pc_rst, pc_write, pc_sel, ir_load;
   output reg [3:0] alu_op;
 
-  parameter start0=0, start1=1, fetch=2, decode=3, execute=4, mem=5, writeback=6;
-  parameter REG_OP=1, REG_IM=2, BRA=4, BNE=6, HLT=15;
+  // States
+  parameter start1 = 1, fetch = 2, decode = 3, execute = 4, mem = 5, writeback = 6;
+
+  // Opcodes
+  parameter NOOP = 0, REG_OP = 1, REG_IM = 2, BRA = 4, BRR = 5, BNE = 6, BNR = 7, HLT = 15;
 
   reg [2:0] present_state, next_state;
 
-  always @(posedge clk, negedge rst_f) begin
-    if (rst_f == 1'b0) present_state <= start1;
-    else present_state <= next_state;
+  // State Transition - Sequential
+  always @(posedge clk or negedge rst_f) begin
+    if (rst_f == 1'b0) 
+      present_state <= start1;
+    else 
+      present_state <= next_state;
   end
 
+  // Next State Logic - Combinational
   always @(*) begin
     case(present_state)
-      start0:    next_state = start1;
-      start1:    next_state = (rst_f == 1'b0) ? start1 : fetch;
+      start1:    next_state = fetch;
       fetch:     next_state = decode;
-      decode:    next_state = execute;
+      decode:    begin
+        // Branches finish here and loop back to fetch
+        if (opcode == BRA || opcode == BRR || opcode == BNE || opcode == BNR)
+          next_state = fetch;
+        else if (opcode == HLT)
+          next_state = decode; 
+        else if (opcode == NOOP)
+          next_state = fetch;
+        else
+          next_state = execute;
+      end
       execute:   next_state = mem;
       mem:       next_state = writeback;
       writeback: next_state = fetch;
-      default:   next_state = start1;
+      default:   next_state = fetch;
     endcase
   end
 
+  // Output Logic
   always @(*) begin
+    // Defaults to prevent latches
     rf_we = 0; wb_sel = 0; alu_op = 0;
     br_sel = 0; pc_sel = 0; pc_write = 0; ir_load = 0;
-    pc_rst = (rst_f == 1'b0); 
+    pc_rst = (rst_f == 1'b0);
 
     case(present_state)
-      start1:    pc_rst = 1;
-      fetch:     begin ir_load = 1; pc_write = 1; end
-      decode:    begin
-        if (opcode == BRA) begin br_sel = 1; pc_write = 1; pc_sel = 1; end
-        else if (opcode == BNE && stat[2] == 0) begin br_sel = 1; pc_write = 1; pc_sel = 1; end
+      start1: begin
+        pc_rst = 1;
       end
-      execute:   begin
-        if (opcode == REG_OP) alu_op = 4'b0001; 
-        if (opcode == REG_IM) alu_op = 4'b0011; 
+
+      fetch: begin
+        ir_load = 1;
+        pc_write = 1; // Increment PC (PC = PC + 1)
+        pc_sel = 0;   // Select PC_inc mux path
       end
-      writeback: if (opcode == REG_OP || opcode == REG_IM) rf_we = 1;
+
+      decode: begin
+        // BRA: absolute — taken if (CC & STAT) != 0
+        if (opcode == BRA) begin
+          if ((mm & stat) != 4'b0000) begin
+            br_sel = 1; pc_sel = 1; pc_write = 1;
+          end
+        end
+        // BRR: relative — taken if (CC & STAT) != 0
+        else if (opcode == BRR) begin
+          if ((mm & stat) != 4'b0000) begin
+            br_sel = 0; pc_sel = 1; pc_write = 1;
+          end
+        end
+        // BNE: absolute — taken if (CC & STAT) == 0; mm==0 => unconditional
+        else if (opcode == BNE) begin
+          if (mm == 4'b0000 || (mm & stat) == 4'b0000) begin
+            br_sel = 1; pc_sel = 1; pc_write = 1;
+          end
+        end
+        // BNR: relative — taken if (CC & STAT) == 0; mm==0 => unconditional
+        else if (opcode == BNR) begin
+          if (mm == 4'b0000 || (mm & stat) == 4'b0000) begin
+            br_sel = 0; pc_sel = 1; pc_write = 1;
+          end
+        end
+      end
+
+      execute, mem, writeback: begin
+        if (opcode == REG_OP) begin
+          alu_op = 4'b0001; 
+          if (present_state == writeback) rf_we = 1;
+        end
+        else if (opcode == REG_IM) begin
+          alu_op = 4'b0011; 
+          if (present_state == writeback) rf_we = 1;
+        end
+        wb_sel = 0; 
+      end
     endcase
   end
 
-  always @(opcode) if (opcode == HLT) begin #5 $display("Halt."); $stop; end
+  // Halt Logic
+  always @(posedge clk) begin
+    if (present_state == decode && opcode == HLT) begin
+      $display("Halt instruction reached at time %t. Simulation finished.", $time);
+      $finish;
+    end
+  end
 
 endmodule
