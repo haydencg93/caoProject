@@ -14,11 +14,14 @@ module sisc (clk, rst_f);
   wire [31:0] rega, regb, wr_dat, alu_out;
 
   // Module Instantiations
+  // Change u9 to u9 (This already matches)
   ir u9 (clk, ir_load, im_out, ir);
 
-  im u8 (pc_out, im_out);
+  // Change u8 to u11
+  im u11 (pc_out, im_out);
 
-  pc u7 (clk, pc_br, pc_sel, pc_write, pc_rst, pc_out);
+  // Change u7 to u10
+  pc u10 (clk, pc_br, pc_sel, pc_write, pc_rst, pc_out);
 
   br u4 (pc_out, ir[15:0], br_sel, pc_br);
 
