@@ -1,0 +1,22 @@
+// sort_instr.data
+// Bubble Sort Algorithm
+21100001 //00: ADI R1, R0, #1      ; R1 = 1 (Constant for inc/dec)
+A0200000 //01: LDA R2, #0000       ; R2 = N (Array size from M[0])
+12221000 //02: SUB R2, R2, R1      ; R2 = N - 1 (Outer loop counter)
+5100000F //03: BRR Z, 15           ; If N-1 == 0, goto DONE
+5200000E //04: BRR N, 14           ; If N-1 < 0, goto DONE
+11320000 //05: ADD R3, R2, R0      ; OUTER: R3 = R2 (Inner loop counter)
+21400001 //06: ADI R4, R0, #1      ; R4 = 1 (Memory pointer)
+A8640000 //07: LDX R6, R4, #0      ; INNER: R6 = M[R4]
+A8740001 //08: LDX R7, R4, #1      ; R7 = M[R4 + 1]
+12567000 //09: SUB R5, R6, R7      ; R5 = R6 - R7 (Compare elements)
+52000003 //0A: BRR N, 3            ; If R6 < R7, goto SKIP
+51000002 //0B: BRR Z, 2            ; If R6 == R7, goto SKIP
+B8740000 //0C: STX R7, R4, #0      ; Swap: M[R4] = R7
+B8640001 //0D: STX R6, R4, #1      ; Swap: M[R4+1] = R6
+21440001 //0E: ADI R4, R4, #1      ; SKIP: R4++ (Move pointer)
+12331000 //0F: SUB R3, R3, R1      ; R3-- (Decrement inner counter)
+7100FFF6 //10: BNR Z, -10          ; If R3 != 0, loop to INNER (07)
+12221000 //11: SUB R2, R2, R1      ; R2-- (Decrement outer counter)
+7100FFF2 //12: BNR Z, -14          ; If R2 != 0, loop to OUTER (05)
+F0000000 //13: HLT                 ; DONE

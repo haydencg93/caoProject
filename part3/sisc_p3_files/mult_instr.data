@@ -1,0 +1,22 @@
+// mult_instr.data
+// Shift and Add Multiplication
+A0100000 //00: LDA R1, #0000       ; R1 = B (Multiplier)
+A0200001 //01: LDA R2, #0001       ; R2 = A (Multiplicand Low Word)
+11300000 //02: ADD R3, R0, R0      ; R3 = 0 (Multiplicand High Word)
+11400000 //03: ADD R4, R0, R0      ; R4 = 0 (Result Low Word)
+11500000 //04: ADD R5, R0, R0      ; R5 = 0 (Result High Word)
+21700001 //05: ADI R7, R0, #1      ; R7 = 1 (Constant)
+21600020 //06: ADI R6, R0, #32     ; R6 = 32 (Loop counter)
+16817000 //07: AND R8, R1, R7      ; LOOP: R8 = R1 & 1
+12880000 //08: SUB R8, R8, R0      ; Set Z flag if R8 == 0
+51000002 //09: BRR Z, 2            ; If Z=1, goto SKIP_ADD (0C)
+11442000 //0A: ADD R4, R4, R2      ; R4 = R4 + R2 (Sets Carry out)
+13553000 //0B: ADC R5, R5, R3      ; R5 = R5 + R3 + Carry in
+1F227000 //0C: ASL R2, R2, R7      ; SKIP_ADD: Shift R2 left, MSB to Carry
+1D337000 //0D: RLC R3, R3, R7      ; Rotate R3 left bringing Carry into LSB
+1A117000 //0E: SHR R1, R1, R7      ; Shift multiplier right
+12667000 //0F: SUB R6, R6, R7      ; R6--
+7100FFF6 //10: BNR Z, -10          ; If R6 != 0, goto LOOP (07)
+B0400002 //11: STA R4, #0002       ; Store Result LSW to M[2]
+B0500003 //12: STA R5, #0003       ; Store Result MSW to M[3]
+F0000000 //13: HLT                 ; DONE
